@@ -1,7 +1,12 @@
 import React, {createContext, useEffect, useReducer} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import cafeApi from '../api/cafeApi';
-import {LoginData, LoginResponse, Usuario} from '../interfaces/appInterfaces';
+import {
+  LoginData,
+  LoginResponse,
+  RegisterData,
+  Usuario,
+} from '../interfaces/appInterfaces';
 import {AuthReducer, AuthState} from './AuthReducer';
 
 type AuthContextProps = {
@@ -9,7 +14,7 @@ type AuthContextProps = {
   token: string | null;
   user: Usuario | null;
   status: 'checking' | 'authenticated' | 'not-authenticated';
-  signUp: () => void;
+  signUp: (registerData: RegisterData) => void;
   signIn: (loginData: LoginData) => void;
   removeError: () => void;
   logOut: () => void;
@@ -93,7 +98,35 @@ export const AuthProvider = ({children}: Props) => {
     }
   };
 
-  const signUp = () => {};
+  /**
+   * It creates a new user, and
+   * if the request is successful, it saves the token in the app's storage and dispatches a state
+   * change
+   * @param {RegisterData}  - RegisterData
+   */
+  const signUp = async ({nombre, correo, password}: RegisterData) => {
+    try {
+      const resp = await cafeApi.post<LoginResponse>('/usuarios', {
+        nombre,
+        correo,
+        password,
+      });
+
+      // Dispatch state change
+      dispatch({
+        type: 'signUp',
+        payload: {token: resp.data.token, user: resp.data.usuario},
+      });
+
+      // Save token
+      await AsyncStorage.setItem('token', resp.data.token);
+    } catch (error) {
+      dispatch({
+        type: 'addError',
+        payload: error.response.data.errors[0].msg || 'Something went wrong',
+      });
+    }
+  };
 
   /**
    * It dispatches an action to the reducer to remove the error

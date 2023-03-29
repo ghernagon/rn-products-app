@@ -1,6 +1,7 @@
 import {StackScreenProps} from '@react-navigation/stack';
-import React from 'react';
+import React, {useContext, useEffect} from 'react';
 import {
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import {Logo} from '../components/Logo';
+import {AuthContext} from '../context/AuthContext';
 import {useForm} from '../hooks/useForm';
 import {loginStyles} from '../theme/loginTheme';
 
@@ -23,10 +25,17 @@ export const RegisterScreen = ({navigation}: Props) => {
     password: '',
   });
 
+  const {signUp, errorMsg, removeError} = useContext(AuthContext);
+
   const onRegister = () => {
-    console.log({name, email, password});
     Keyboard.dismiss();
+    signUp({nombre: name, correo: email, password});
   };
+
+  useEffect(() => {
+    if (errorMsg.length === 0) return;
+    Alert.alert('Register', errorMsg, [{text: 'Accept', onPress: removeError}]);
+  }, [errorMsg]);
 
   return (
     <>
@@ -49,8 +58,8 @@ export const RegisterScreen = ({navigation}: Props) => {
               Platform.OS === 'ios' && loginStyles.iosInputField,
             ]}
             selectionColor="white"
-            onChangeText={value => onChange(value, 'email')}
-            value={email}
+            onChangeText={value => onChange(value, 'name')}
+            value={name}
             onSubmitEditing={onRegister}
           />
 
