@@ -1,5 +1,5 @@
 import {StackScreenProps} from '@react-navigation/stack';
-import React, {useContext, useEffect} from 'react';
+import React, {useContext, useEffect, useState} from 'react';
 import {
   Button,
   Image,
@@ -14,6 +14,7 @@ import {Picker} from '@react-native-picker/picker';
 import {useCategories} from '../hooks/useCategories';
 import {useForm} from '../hooks/useForm';
 import {ProductContext} from '../context/ProductsContext';
+import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 
 interface Props
   extends StackScreenProps<ProductsStackParams, 'ProductScreen'> {}
@@ -21,8 +22,11 @@ interface Props
 export const ProductScreen = ({navigation, route}: Props) => {
   const {id = '', name = ''} = route.params;
 
+  const [tmpUri, setTmpUri] = useState<string>();
+
   const {categories} = useCategories();
-  const {loadProductById} = useContext(ProductContext);
+  const {loadProductById, addProduct, updateProduct, uploadImage} =
+    useContext(ProductContext);
 
   const {_id, categoriaId, nombre, img, form, onChange, setFormValue} = useForm(
     {
@@ -35,16 +39,16 @@ export const ProductScreen = ({navigation, route}: Props) => {
 
   useEffect(() => {
     navigation.setOptions({
-      title: name || 'New Product',
+      title: nombre ? nombre : id ? 'No product name' : 'New Product',
     });
-  }, []);
+  }, [nombre]);
 
   useEffect(() => {
     loadProduct();
   }, []);
 
   const loadProduct = async () => {
-    if (id.length === 0) return;
+    if (_id.length === 0) return;
     const product = await loadProductById(id);
     setFormValue({
       _id: id,
@@ -52,6 +56,50 @@ export const ProductScreen = ({navigation, route}: Props) => {
       nombre,
       img: product.img || '',
     });
+  };
+
+  const saveOrUpdateProduct = async () => {
+    if (_id.length > 0) {
+      updateProduct(categoriaId, nombre, id);
+    } else {
+      const tmpCategoryId = categoriaId || categories[0]._id;
+      const newProduct = await addProduct(tmpCategoryId, nombre);
+      onChange(newProduct._id, '_id');
+    }
+  };
+
+  const takePhoto = () => {
+    launchCamera(
+      {
+        mediaType: 'photo',
+        quality: 0.5,
+      },
+      resp => {
+        console.log(resp);
+        if (resp.didCancel) return;
+        if (!resp.assets?.[0].uri) return;
+        setTmpUri(resp.assets?.[0].uri);
+
+        uploadImage(resp, _id);
+      },
+    );
+  };
+
+  const takePhotoFromGallery = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        quality: 0.5,
+      },
+      resp => {
+        console.log(resp);
+        if (resp.didCancel) return;
+        if (!resp.assets?.[0].uri) return;
+        setTmpUri(resp.assets?.[0].uri);
+
+        uploadImage(resp, _id);
+      },
+    );
   };
 
   return (
@@ -75,15 +123,27 @@ export const ProductScreen = ({navigation, route}: Props) => {
           ))}
         </Picker>
 
-        <Button title="Save" onPress={() => {}} color="#5856D6" />
+        <Button title="Save" onPress={saveOrUpdateProduct} color="#5856D6" />
 
-        <View style={styles.row}>
-          <Button title="Camera" onPress={() => {}} color="#5856D6" />
-          <View style={styles.itemSeparator} />
-          <Button title="Gallery" onPress={() => {}} color="#5856D6" />
-        </View>
+        {/* Show image buttons if product has been saved or exist */}
+        {_id.length > 0 && (
+          <View style={styles.row}>
+            <Button title="Camera" onPress={takePhoto} color="#5856D6" />
+            <View style={styles.itemSeparator} />
+            <Button
+              title="Gallery"
+              onPress={takePhotoFromGallery}
+              color="#5856D6"
+            />
+          </View>
+        )}
 
-        {img.length > 0 && <Image source={{uri: img}} style={styles.image} />}
+        {img.length > 0 && !tmpUri && (
+          <View style={styles.row}>
+            <Image source={{uri: img}} style={styles.image} />
+          </View>
+        )}
+        {tmpUri && <Image source={{uri: tmpUri}} style={styles.image} />}
       </ScrollView>
     </View>
   );

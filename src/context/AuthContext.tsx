@@ -37,6 +37,7 @@ export const AuthProvider = ({children}: Props) => {
   const [state, dispatch] = useReducer(AuthReducer, authInitialState);
 
   useEffect(() => {
+    // AsyncStorage.removeItem('token');
     checkToken();
   }, []);
 

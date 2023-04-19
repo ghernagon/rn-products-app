@@ -1,5 +1,6 @@
+/* eslint-disable react/no-unstable-nested-components */
+import React, {useContext, useEffect, useState} from 'react';
 import {StackScreenProps} from '@react-navigation/stack';
-import React, {useContext, useEffect} from 'react';
 import {FlatList, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {ProductContext} from '../context/ProductsContext';
 import {ProductsStackParams} from '../navigator/ProductsNavigator';
@@ -9,6 +10,7 @@ interface Props
 
 export const ProductsScreen = ({navigation}: Props) => {
   const {products, loadProducts} = useContext(ProductContext);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -23,7 +25,11 @@ export const ProductsScreen = ({navigation}: Props) => {
     });
   }, []);
 
-  // TODO: pull to refresh
+  const loadProductsFromBackend = async () => {
+    setRefreshing(true);
+    await loadProducts();
+    setRefreshing(false);
+  };
 
   return (
     <View style={styles.container}>
@@ -43,6 +49,8 @@ export const ProductsScreen = ({navigation}: Props) => {
           </TouchableOpacity>
         )}
         ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+        refreshing={refreshing}
+        onRefresh={loadProductsFromBackend}
       />
     </View>
   );
